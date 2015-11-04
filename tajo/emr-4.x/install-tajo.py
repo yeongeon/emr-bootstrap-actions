@@ -80,6 +80,7 @@ import socket
 import tarfile
 import urllib2
 import time
+import subprocess
 from xml.etree import ElementTree
 from urlparse import urlparse
 
@@ -235,7 +236,8 @@ class FileUtil:
         self.ln(__file__, './installtajolib.py', True)
         invoke = InvokeUtil()
         fname = invoke.makeInvoke(fname, hadoop_home)
-        pid = os.spawnvp(os.P_NOWAIT, fname, values)
+        values.insert(0, fname)
+        pid = subprocess.Popen(values)
         return pid
 
 
@@ -629,22 +631,30 @@ export TAJO_CLASSPATH="$TAJO_CLASSPATH:$HADOOP_LZO_HOME/lib/*"
     def parse_args(self, opt):
         values = []
         if opt.conf:
-            values.append('-c %s' % (opt.conf,))
+            values.append('-c')
+            values.append('%s' % (opt.conf,))
         if opt.tajo_package_uri:
-            values.append('-t %s' % (opt.tajo_package_uri,))
+            values.append('-t')
+            values.append('%s' % (opt.tajo_package_uri,))
         if opt.site:
-            values.append('-s %s' % (opt.site,))
+            values.append('-s')
+            values.append('%s' % (opt.site,))
         if opt.tajo_version:
-            values.append('-v %s' % (opt.tajo_version,))
+            values.append('-v')
+            values.append('%s' % (opt.tajo_version,))
         if opt.env:
-            values.append('-e %s' % (opt.env,))
+            values.append('-e')
+            values.append('%s' % (opt.env,))
         if opt.lib:
-            values.append('-l %s' % (opt.lib,))
+            values.append('-l')
+            values.append('%s' % (opt.lib,))
         if opt.test_hadoop_home:
-            values.append('-H %s' % (opt.test_hadoop_home,))
+            values.append('-H')
+            values.append('%s' % (opt.test_hadoop_home,))
         if opt.test_dir:
-            values.append('-T %s' % (opt.test_dir,))
-        return tuple(values)
+            values.append('-T')
+            values.append('%s' % (opt.test_dir,))
+        return values
 
     def build(self):
         self.fileUtil = FileUtil(self.TAJO_BASE)
