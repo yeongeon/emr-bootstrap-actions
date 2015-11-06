@@ -568,7 +568,7 @@ $HADOOP_HDFS_HOME/lib
 $HADOOP_YARN_HOME
 $HADOOP_LZO_HOME/lib"'''
         match = re.compile(target, re.M)
-        shutil.copy(org, src)
+        self.fileUtil.cp(org, src)
         with open(src, 'r') as content_file:
             content = content_file.read()
             ret = match.search(content)
@@ -578,7 +578,7 @@ $HADOOP_LZO_HOME/lib"'''
                 fnew = open(org, 'w')
                 fnew.write(ret)
                 fnew.close()
-                os.remove(src)
+                self.fileUtil.rm(src)
                 print "Successed to change content."
             else:
                 print "Failed set hadoop modules : Not found target and not changed env."
