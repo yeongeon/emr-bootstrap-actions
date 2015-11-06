@@ -311,24 +311,41 @@ launcherUtil.start()'''
 
 
 class LauncherUtil:
-    EXPORT_LIB_MASTER = '''export JAVA_HOME=/usr/lib/jvm/java-1.7.0-openjdk.x86_64
+    EXPORT_LIBS = '''
+export JAVA_HOME=/usr/lib/jvm/java-1.7.0-openjdk.x86_64
 export HADOOP_HOME=%s
-export HADOOP_LZO_HOME=%s
-export TAJO_CLASSPATH="$TAJO_CLASSPATH:/usr/share/aws/emr/emrfs/lib/*:/usr/share/aws/emr/lib/*"
-export TAJO_CLASSPATH="$TAJO_CLASSPATH:$HADOOP_HOME/client/*"
-export TAJO_CLASSPATH="$TAJO_CLASSPATH:$HADOOP_LZO_HOME/lib/*"
-'''
-    EXPORT_LIB_WORKER = '''export JAVA_HOME=/usr/lib/jvm/java-1.7.0-openjdk.x86_64
-export HADOOP_HOME=%s
+export HADOOP_MAPREDUCE_HOME=%s
 export HADOOP_HDFS_HOME=%s
 export HADOOP_YARN_HOME=%s
 export HADOOP_LZO_HOME=%s
-export TAJO_CLASSPATH="$TAJO_CLASSPATH:/usr/share/aws/emr/emrfs/lib/*:/usr/share/aws/emr/lib/*"
-export TAJO_CLASSPATH="$TAJO_CLASSPATH:$HADOOP_HOME/*:$HADOOP_HOME/lib/*"
-export TAJO_CLASSPATH="$TAJO_CLASSPATH:$HADOOP_HDFS_HOME/*:$HADOOP_HDFS_HOME/lib/*"
-export TAJO_CLASSPATH="$TAJO_CLASSPATH:$HADOOP_YARN_HOME/*"
-export TAJO_CLASSPATH="$TAJO_CLASSPATH:$HADOOP_LZO_HOME/lib/*"
+export TAJO_CLASSPATH="$TAJO_CLASSPATH:/usr/share/aws/emr/emrfs/lib:/usr/share/aws/emr/lib"
+export TAJO_CLASSPATH="$TAJO_CLASSPATH:$HADOOP_HOME:$HADOOP_HOME/lib"
+export TAJO_CLASSPATH="$TAJO_CLASSPATH:$HADOOP_MAPREDUCE_HOME"
+export TAJO_CLASSPATH="$TAJO_CLASSPATH:$HADOOP_HDFS_HOME:$HADOOP_HDFS_HOME/lib"
+export TAJO_CLASSPATH="$TAJO_CLASSPATH:$HADOOP_YARN_HOME"
+export TAJO_CLASSPATH="$TAJO_CLASSPATH:$HADOOP_LZO_HOME/lib"
 '''
+    HADOOP_MODULE_DIRS_REGEX = r'''# HADOOP JAR DIRS
+HADOOP_MODULE_DIRS="$HADOOP_HOME/share/hadoop/common/lib
+$HADOOP_HOME/share/hadoop/common
+$HADOOP_HOME/share/hadoop/hdfs
+$HADOOP_HOME/share/hadoop/hdfs/lib
+$HADOOP_HOME/share/hadoop/yarn
+$HADOOP_HOME/share/hadoop/mapreduce
+$HADOOP_HOME/share/hadoop/tools/lib"'''
+
+    HADOOP_MODULE_DIRS = '''
+HADOOP_MODULE_DIRS="/usr/share/aws/emr/emrfs/lib
+/usr/share/aws/emr/lib
+$HADOOP_HOME
+$HADOOP_HOME/lib
+$HADOOP_MAPREDUCE_HOME
+$HADOOP_HDFS_HOME
+$HADOOP_HDFS_HOME/lib
+$HADOOP_YARN_HOME
+$HADOOP_LZO_HOME/lib"
+'''
+
     DEFAULT_HELP_MESSAGE = '''usage : install-tajo.py [-t|--tar] [-c|--conf] [-l|--lib] [-h|--help] [-e|--env] [-s|--site] [-T|--test-home] [-H|--test-hadoop-home]
  -t, --tar
        The tajo binary Tarball URL.(Optional)
@@ -527,6 +544,46 @@ export TAJO_CLASSPATH="$TAJO_CLASSPATH:$HADOOP_LZO_HOME/lib/*"
         os.symlink(src, dest)
         self.TAJO_HOME = dest
 
+    def set_hadoop_modules(self):
+        print('Info: Setting hadoop modules in tajo script.')
+        org = '%s/bin/tajo' % (self.TAJO_HOME,)
+        src = '%s/bin/tajo.tmp' % (self.TAJO_HOME,)
+        target = r'''^# HADOOP JAR DIRS
+HADOOP_MODULE_DIRS="\$HADOOP_HOME/share/hadoop/common/lib
+\$HADOOP_HOME/share/hadoop/common
+\$HADOOP_HOME/share/hadoop/hdfs
+\$HADOOP_HOME/share/hadoop/hdfs/lib
+\$HADOOP_HOME/share/hadoop/yarn
+\$HADOOP_HOME/share/hadoop/mapreduce
+\$HADOOP_HOME/share/hadoop/tools/lib"$'''
+        change = r'''
+# HADOOP JAR DIRS
+HADOOP_MODULE_DIRS="/usr/share/aws/emr/emrfs/lib
+usr/share/aws/emr/lib
+$HADOOP_HOME
+$HADOOP_HOME/lib
+$HADOOP_MAPREDUCE_HOME
+$HADOOP_HDFS_HOME
+$HADOOP_HDFS_HOME/lib
+$HADOOP_YARN_HOME
+$HADOOP_LZO_HOME/lib"'''
+        match = re.compile(target, re.M)
+        shutil.copy(org, src)
+        with open(src, 'r') as content_file:
+            content = content_file.read()
+            ret = match.search(content)
+            if ret:
+                print ret.group()
+                ret = match.sub(change, content)
+                fnew = open(org, 'w')
+                fnew.write(ret)
+                fnew.close()
+                os.remove(src)
+                print "Successed to change content."
+            else:
+                print "Failed set hadoop modules : Not found target and not changed env."
+
+
     def set_tajo_conf(self):
         print('Info: Setting tajo conf.')
         if self.TAJO_CONF_URI:
@@ -547,18 +604,15 @@ export TAJO_CLASSPATH="$TAJO_CLASSPATH:$HADOOP_LZO_HOME/lib/*"
         tajo_env_sh = '%s/conf/tajo-env.sh' % (self.TAJO_HOME,)
         ftajo_env_sh = open(tajo_env_sh, 'a', 0)
         echo_hadoop_home = '/usr/lib/hadoop'
+        echo_hadoop_mapreduce_home = '%s-mapreduce' % (echo_hadoop_home,)
+        echo_hadoop_hdfs_home = '%s-hdfs' % (echo_hadoop_home,)
+        echo_hadoop_yarn_home = '%s-yarn' % (echo_hadoop_home,)
         echo_hadoop_lzo_home = '%s-lzo' % (echo_hadoop_home,)
         # Test mode
         if self.TEST_MODE:
             echo_hadoop_home = self.TEST_HADOOP_HOME
-        export_lib = self.EXPORT_LIB_MASTER % (echo_hadoop_home, echo_hadoop_lzo_home)
-        jsonUtil = JsonUtil('/mnt/var/lib/info/instance.json')
-        if not jsonUtil.get('isMaster'):
-            echo_hadoop_hdfs_home = '%s-hdfs' % (echo_hadoop_home,)
-            echo_hadoop_yarn_home = '%s-yarn' % (echo_hadoop_home,)
-            export_lib = self.EXPORT_LIB_WORKER % (
-                echo_hadoop_home, echo_hadoop_hdfs_home, echo_hadoop_yarn_home, echo_hadoop_lzo_home)
-        ftajo_env_sh.write(export_lib)
+        export_libs = self.EXPORT_LIBS % (echo_hadoop_home, echo_hadoop_mapreduce_home, echo_hadoop_hdfs_home, echo_hadoop_yarn_home, echo_hadoop_lzo_home,)
+        ftajo_env_sh.write(export_libs)
 
         # using --env option
         if self.TAJO_ENV:
@@ -663,6 +717,7 @@ export TAJO_CLASSPATH="$TAJO_CLASSPATH:$HADOOP_LZO_HOME/lib/*"
         self.unpack()
         self.makeln()
         self.set_tajo_conf()
+        self.set_hadoop_modules()
         self.third_party_lib()
 
     def start(self):
