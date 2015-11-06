@@ -58,6 +58,7 @@ Launching a Tajo cluster with a default configurations
  * It is good for a simple test. 
 
 1. EMR-3.x
+
 ```bash
 $ aws emr create-cluster \
 	--name="[CLUSTER_NAME]" \
@@ -69,6 +70,7 @@ $ aws emr create-cluster \
 ```
 
 2. EMR-4.x
+
 ```bash
 $ aws emr create-cluster \
 	--name="[CLUSTER_NAME]" \
@@ -93,6 +95,7 @@ Launching a Tajo cluster with additional configurations
  * if you need third party(external) library like xxx.jar, use ```-l``` option to specify S3 directory URL, including third party Jars.
  
 1. EMR-3.x
+
 ```bash
     aws emr create-cluster \
     --name="[CLUSTER_NAME]" \
@@ -104,6 +107,7 @@ Launching a Tajo cluster with additional configurations
 ```
 
 2. EMR-4.x
+
 ```bash
     aws emr create-cluster \
     --name="[CLUSTER_NAME]" \
@@ -152,6 +156,7 @@ Tajo can use RDS. For it:
  * To use RDS, you needs appropriate JDBC jars like mysql-connector.jar. ```-l``` option allows you to specify S3 directory URL, including third party Jars.
 
 1. EMR-3.x
+
 ```bash
     aws emr create-cluster \
     --name="[CLUSTER_NAME]" \
@@ -164,6 +169,7 @@ Tajo can use RDS. For it:
 ```
 
 2. EMR-4.x
+
 ```bash
     aws emr create-cluster \
     --name="[CLUSTER_NAME]" \
