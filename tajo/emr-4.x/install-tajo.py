@@ -170,16 +170,8 @@ class FileUtil:
         elif os.path.exists(path):
             os.remove(path)
 
-    def cp(self, src, dest):
-        shutil.copy(src, dest)
-
     def cp2(self, src, dest):
         shutil.copy2(src, dest)
-
-    def cp(self, src, dest, forced):
-        if forced:
-            self.rm(dest)
-        return shutil.copy(src, dest)
 
     def ln(self, src, dest):
         return os.symlink(src, dest)
@@ -222,7 +214,7 @@ class FileUtil:
             handle.close()
         else:
             if self.TEST_MODE:
-                return self.cp(src, dest)
+                return self.cp2(src, dest)
             else:
                 return os.system('hdfs dfs -copyToLocal %s %s' % (src, dest))
 
@@ -570,7 +562,7 @@ $HADOOP_HDFS_HOME/lib
 $HADOOP_YARN_HOME
 $HADOOP_LZO_HOME/lib"'''
         match = re.compile(target, re.M)
-        self.fileUtil.cp(org, src)
+        self.fileUtil.cp2(org, src)
         with open(src, 'r') as content_file:
             content = content_file.read()
             ret = match.search(content)
