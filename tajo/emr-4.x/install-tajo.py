@@ -546,6 +546,8 @@ $HADOOP_LZO_HOME/lib"
 
     def set_hadoop_modules(self):
         print('Info: Setting hadoop modules in tajo script.')
+        if self.TEST_MODE:
+            return
         org = '%s/bin/tajo' % (self.TAJO_HOME,)
         src = '%s/bin/tajo.tmp' % (self.TAJO_HOME,)
         target = r'''^# HADOOP JAR DIRS
